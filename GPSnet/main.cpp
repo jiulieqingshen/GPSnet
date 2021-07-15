@@ -2,11 +2,13 @@
 #include<fstream>
 #include<string>
 #include <map>
+#include <Eigen/Dense>
 
 using std::string;
 using std::ifstream;
 using std::cout;
 using std::map;
+using namespace::Eigen;
 
 struct Point
 {
@@ -31,7 +33,6 @@ private:
 	map<string, int>dic;
 	int** B;
 	Point* l;
-	//int sortedNum;
 	int known_point_num, nuknown_point_num, observation_num;
 	double** P;
 
@@ -92,6 +93,7 @@ GPSnet::GPSnet(string filePath)
 				>> P[i * 3 + 2][i * 3 + 0] >> P[i * 3 + 2][i * 3 + 1] >> P[i * 3 + 3][i * 3 + 2];
 		}
 	}
+
 
 
 
