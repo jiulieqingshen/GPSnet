@@ -7,8 +7,11 @@
 
 using std::string;
 using std::ifstream;
+using std::ofstream;
+using std::ios;
 using std::cout;
 using std::map;
+using std::endl;
 using namespace::Eigen;//ÒıÈëEigen¾ØÕó¿â
 
 

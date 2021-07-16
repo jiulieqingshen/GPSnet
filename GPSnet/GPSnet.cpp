@@ -208,20 +208,95 @@ void GPSnet::loadData(string filePath)
 		l(3 * i + 1, 0) = lines[i].dy - (lines[i].end.y - lines[i].begin.y);
 		l(3 * i + 2, 0) = lines[i].dz - (lines[i].end.z - lines[i].begin.z);
 	}
+	x = (B.transpose()*P*B).inverse()*B.transpose()*P*l;
+	v = B * x - l;
 }
-
 
 //输出解算结果到控制台
 void GPSnet::print()
 {
-
+	cout << "*******************平差结果*******************" << endl;
+	cout << "P:" << endl << P << endl;
+	cout << "B:" << endl << B << endl;
+	cout << "l:" << endl << l << endl;
+	cout << "x:" << endl << x << endl;
+	cout << "v:" << endl << v << endl;
+	for (int i = 0; i < observation_num; i++)
+	{	
+		cout << lines[i].begin.pointName << "  " << lines[i].end.pointName << "  ";
+		cout << "dx:" << lines[i].dx + v(i * 3 + 0,0) << "  dy:" << lines[i].dy + v(i * 3 + 1,0) << "  dz:" << lines[i].dz + v(i * 3 + 2,0) << endl;
+	}
+	map<string, int>temp;
+	int index = 0;
+	for (int i = 0; i < known_point_num; i++)
+	{
+		temp[knownPoints[i].pointName] = 0;
+	}
+	for (int i = 0; i < observation_num; i++)
+	{
+		if ((temp.find(lines[i].begin.pointName) == temp.end()))
+		{
+			cout << lines[i].begin.pointName << ",   x:" << lines[i].begin.x + x(index,0)
+				<< ",   y:" << lines[i].begin.y + x(index + 1,0) << ",   z:" << lines[i].begin.z + x(index + 2,0) << endl;
+			index += 3;
+			temp[lines[i].begin.pointName] = 1;
+		}
+		if ((temp.find(lines[i].end.pointName) == temp.end()))
+		{
+			cout << lines[i].end.pointName << ",   x:" << lines[i].end.x + x(index,0)
+				<< ",   y:" << lines[i].end.y + x(index + 1,0) << ",   z:" << lines[i].end.z + x(index + 2,0) << endl;
+			index += 3;
+			temp[lines[i].end.pointName] = 1;
+		}
+	}
+	cout << "\n\n\n*******************精度评定*******************" << endl;
+	cout << "Qxx:" << endl << (B.transpose()*P*B).inverse() << endl;
+	cout << "Qll:" << endl<<B* (B.transpose()*P*B).inverse() *B.transpose()<<endl;
 }
 
 
 //输出解算结果到文件
 void GPSnet::print(string filePath)
 {
-
+	ofstream ofs(filePath, ios::trunc);
+	ofs << "*******************平差结果*******************" << endl;
+	ofs << "P:" << endl << P << endl;
+	ofs << "B:" << endl << B << endl;
+	ofs << "l:" << endl << l << endl;
+	ofs << "x:" << endl << x << endl;
+	ofs << "v:" << endl << v << endl;
+	for (int i = 0; i < observation_num; i++)
+	{
+		ofs << lines[i].begin.pointName << "  " << lines[i].end.pointName << "  ";
+		ofs << "dx:" << lines[i].dx + v(i * 3 + 0, 0) << "  dy:" << lines[i].dy + v(i * 3 + 1, 0) << "  dz:" << lines[i].dz + v(i * 3 + 2, 0) << endl;
+	}
+	map<string, int>temp;
+	int index = 0;
+	for (int i = 0; i < known_point_num; i++)
+	{
+		temp[knownPoints[i].pointName] = 0;
+	}
+	for (int i = 0; i < observation_num; i++)
+	{
+		if ((temp.find(lines[i].begin.pointName) == temp.end()))
+		{
+			ofs << lines[i].begin.pointName << ",   x:" << lines[i].begin.x + x(index, 0)
+				<< ",   y:" << lines[i].begin.y + x(index + 1, 0) << ",   z:" << lines[i].begin.z + x(index + 2, 0) << endl;
+			index += 3;
+			temp[lines[i].begin.pointName] = 1;
+		}
+		if ((temp.find(lines[i].end.pointName) == temp.end()))
+		{
+			ofs << lines[i].end.pointName << ",   x:" << lines[i].end.x + x(index, 0)
+				<< ",   y:" << lines[i].end.y + x(index + 1, 0) << ",   z:" << lines[i].end.z + x(index + 2, 0) << endl;
+			index += 3;
+			temp[lines[i].end.pointName] = 1;
+		}
+	}
+	ofs << "\n\n\n\n*******************精度评定*******************" << endl;
+	ofs << "Qxx:" << endl << (B.transpose()*P*B).inverse() << endl<<endl;
+	ofs << "Qll:" << endl << B * (B.transpose()*P*B).inverse() *B.transpose() << endl;
+	ofs.close();
 }
 
 
