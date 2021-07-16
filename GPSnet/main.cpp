@@ -31,9 +31,9 @@ private:
 	GPSline* lines;
 	Point* knownPoints;
 	map<string, int>dic;
-	MatrixXi B;
+	MatrixXd B;
 	MatrixXd l;
-	MatrixXi P;
+	MatrixXd P;
 	int known_point_num, nuknown_point_num, observation_num;
 
 
@@ -60,9 +60,9 @@ GPSnet::GPSnet(string filePath)
 
 	lines = new GPSline[observation_num];
 	knownPoints = new Point[known_point_num];
-	B = MatrixXi::Zero(observation_num * 3, nuknown_point_num * 3);
+	B = MatrixXd::Zero(observation_num * 3, nuknown_point_num * 3);
 	l = MatrixXd::Random(observation_num * 3, 1);
-	P = MatrixXi::Zero(observation_num * 3, observation_num * 3);
+	P = MatrixXd::Zero(observation_num * 3, observation_num * 3);
 
 
 
@@ -175,31 +175,26 @@ GPSnet::GPSnet(string filePath)
 
 
 
-
-
 	for (int i = 0; i < observation_num ; i++)
 	{
-		int beginIndex = lines[i].begin.pointNum - known_point_num - 1;
-		int endIndex = lines[i].end.pointNum - known_point_num - 1;
-		if (beginIndex > 0)
+		int beginIndex = lines[i].begin.pointNum - (known_point_num - 1)-1;
+		int endIndex = lines[i].end.pointNum - (known_point_num-1)-1;
+		if (beginIndex >= 0)
 		{
 			B(3 * i + 0, 3 * beginIndex + 0) = -1;
 			B(3 * i + 1, 3 * beginIndex + 1) = -1;
 			B(3 * i + 2, 3 * beginIndex + 2) = -1;
 		}
-		if (endIndex > 0)
+		if (endIndex >= 0)
 		{
-			B(3 * i + 0, 3 * beginIndex + 0) = 1;
-			B(3 * i + 1, 3 * beginIndex + 1) = 1;
-			B(3 * i + 2, 3 * beginIndex + 2) = 1;
+			B(3 * i + 0, 3 * endIndex + 0) = 1;
+			B(3 * i + 1, 3 * endIndex + 1) = 1;
+			B(3 * i + 2, 3 * endIndex + 2) = 1;
 		}
 		l(3 * i + 0) = lines[i].end.x - lines[i].begin.x - lines[i].dx;
 		l(3 * i + 1) = lines[i].end.y - lines[i].begin.y - lines[i].dy;
 		l(3 * i + 2) = lines[i].end.z - lines[i].begin.z - lines[i].dz;
 	}
-
-	
-
 
 }
 
