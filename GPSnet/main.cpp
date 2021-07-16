@@ -14,7 +14,7 @@ struct Point
 {
 	string pointName;
 	int pointNum = -1;
-	double x, y, z;
+	double x = 0, y = 0, z = 0;
 	bool known = false;
 };
 
@@ -34,6 +34,8 @@ private:
 	MatrixXd B;
 	MatrixXd l;
 	MatrixXd P;
+	MatrixXd v;
+	MatrixXd x;
 	int known_point_num, nuknown_point_num, observation_num;
 
 
@@ -86,10 +88,7 @@ GPSnet::GPSnet(string filePath)
 			>> P(i * 3 + 1, i * 3 + 0) >> P(i * 3 + 1, i * 3 + 1) >> P(i * 3 + 1, i * 3 + 2)
 			>> P(i * 3 + 2, i * 3 + 0) >> P(i * 3 + 2, i * 3 + 1) >> P(i * 3 + 2, i * 3 + 2);
 	}
-	cout << "\n\n" <<P;
 	P = P.inverse();
-	cout << "\n\n" << P;
-
 
 
 
@@ -98,9 +97,31 @@ GPSnet::GPSnet(string filePath)
 	for (int i = 0; i < observation_num; i++)
 	{
 		if (!(dic.find(lines[i].begin.pointName) == dic.end()))
+		{
 			lines[i].begin.known = true;
+			for (int j = 0; j < known_point_num; j++)
+			{
+				if (knownPoints[j].pointName == lines[i].begin.pointName)
+				{
+					lines[i].begin.x = knownPoints[j].x;
+					lines[i].begin.y = knownPoints[j].y;
+					lines[i].begin.z = knownPoints[j].z;
+				}
+			}
+		}
 		if (!(dic.find(lines[i].end.pointName) == dic.end()))
+		{
 			lines[i].end.known = true;
+			for (int j = 0; j < known_point_num; j++)
+			{
+				if (knownPoints[j].pointName == lines[i].end.pointName)
+				{
+					lines[i].end.x = knownPoints[j].x;
+					lines[i].end.y = knownPoints[j].y;
+					lines[i].end.z = knownPoints[j].z;
+				}
+			}
+		}
 	}
 
 
@@ -150,6 +171,26 @@ GPSnet::GPSnet(string filePath)
 				lines[i].end.x = lines[i].begin.x + lines[i].dx;
 				lines[i].end.y = lines[i].begin.y + lines[i].dy;
 				lines[i].end.z = lines[i].begin.z + lines[i].dz;
+				for (int j = 0; j < observation_num; j++)
+				{
+					if (lines[j].end.pointName == lines[i].end.pointName)
+					{
+						lines[j].end.known = true;
+						lines[j].end.pointNum = lines[i].end.pointNum;
+						lines[j].end.x = lines[i].end.x;
+						lines[j].end.y = lines[i].end.y;
+						lines[j].end.z = lines[i].end.z;
+					}
+					if (lines[j].begin.pointName == lines[i].end.pointName)
+					{
+						lines[j].begin.known = true;
+						lines[j].begin.pointNum = lines[i].end.pointNum;
+						lines[j].begin.x = lines[i].end.x;
+						lines[j].begin.y = lines[i].end.y;
+						lines[j].begin.z = lines[i].end.z;
+					}
+
+				}
 				lines[i].end.known = true;
 				success = false;
 			}
@@ -158,6 +199,25 @@ GPSnet::GPSnet(string filePath)
 				lines[i].begin.x = lines[i].end.x - lines[i].dx;
 				lines[i].begin.y = lines[i].end.y - lines[i].dy;
 				lines[i].begin.z = lines[i].end.z - lines[i].dz;
+				for (int j = 0; j < observation_num; j++)
+				{
+					if (lines[j].begin.pointName == lines[i].begin.pointName)
+					{
+						lines[j].begin.known = true;
+						lines[j].begin.pointNum = lines[i].begin.pointNum;
+						lines[j].begin.x = lines[i].begin.x;
+						lines[j].begin.y = lines[i].begin.y;
+						lines[j].begin.z = lines[i].begin.z;
+					}
+					if (lines[j].end.pointName == lines[i].begin.pointName)
+					{
+						lines[j].end.known = true;
+						lines[j].end.pointNum = lines[i].begin.pointNum;
+						lines[j].end.x = lines[i].begin.x;
+						lines[j].end.y = lines[i].begin.y;
+						lines[j].end.z = lines[i].begin.z;
+					}
+				}
 				lines[i].begin.known = true;
 				success = false;
 			}
@@ -173,15 +233,15 @@ GPSnet::GPSnet(string filePath)
 
 	for (int i = 0; i < observation_num; i++)
 	{
-		cout<<lines[i].begin.known;
+		cout << lines[i].begin.known;
 	}
 
 
 
-	for (int i = 0; i < observation_num ; i++)
+	for (int i = 0; i < observation_num; i++)
 	{
-		int beginIndex = lines[i].begin.pointNum - (known_point_num - 1)-1;
-		int endIndex = lines[i].end.pointNum - (known_point_num-1)-1;
+		int beginIndex = lines[i].begin.pointNum - (known_point_num - 1) - 1;
+		int endIndex = lines[i].end.pointNum - (known_point_num - 1) - 1;
 		if (beginIndex >= 0)
 		{
 			B(3 * i + 0, 3 * beginIndex + 0) = -1;
@@ -194,15 +254,18 @@ GPSnet::GPSnet(string filePath)
 			B(3 * i + 1, 3 * endIndex + 1) = 1;
 			B(3 * i + 2, 3 * endIndex + 2) = 1;
 		}
-		l(3 * i + 0) = lines[i].end.x - lines[i].begin.x - lines[i].dx;
-		l(3 * i + 1) = lines[i].end.y - lines[i].begin.y - lines[i].dy;
-		l(3 * i + 2) = lines[i].end.z - lines[i].begin.z - lines[i].dz;
+		l(3 * i + 0, 0) = lines[i].dx - (lines[i].end.x - lines[i].begin.x);
+		l(3 * i + 1, 0) = lines[i].dy - (lines[i].end.y - lines[i].begin.y);
+		l(3 * i + 2, 0) = lines[i].dz - (lines[i].end.z - lines[i].begin.z);
 	}
 
-	cout << "\n\n" << B;
-	cout << "\n\n" << (B.transpose()*P*B);
-	cout << "\n\n" << (B.transpose()*P*B).inverse();
-	cout<<"\n\n"<<(B.transpose()*P*B).inverse()*B.transpose()*P*l;
+
+
+	x = (B.transpose()*P*B).inverse()*B.transpose()*P*l;
+	v = B * x - l;
+
+
+
 
 }
 
