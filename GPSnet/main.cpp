@@ -31,10 +31,13 @@ private:
 	GPSline* lines;
 	Point* knownPoints;
 	map<string, int>dic;
-	int** B;
-	Point* l;
+	MatrixXi B;
+	MatrixXd l;
+	MatrixXi P;
 	int known_point_num, nuknown_point_num, observation_num;
-	double** P;
+
+
+
 
 public:
 
@@ -57,16 +60,10 @@ GPSnet::GPSnet(string filePath)
 
 	lines = new GPSline[observation_num];
 	knownPoints = new Point[known_point_num];
-	B = new int*[observation_num];
-	for (int i = 0; i < observation_num; i++)
-		B[i] = new int[nuknown_point_num];
-	l = new Point[observation_num];
-	P = new double*[observation_num * 3];
-	for (int i = 0; i < observation_num; i++)
-		P[i] = new double[observation_num * 3];
-	for (int i = 0; i < observation_num; i++)
-		for (int j = 0; j < observation_num; j++)
-			P[i][j] = 0;
+	B = MatrixXi::Zero(observation_num * 3, nuknown_point_num * 3);
+	l = MatrixXd::Random(observation_num * 3, 1);
+	P = MatrixXi::Zero(observation_num * 3, observation_num * 3);
+
 
 
 	for (int i = 0; i < known_point_num; i++)
@@ -85,13 +82,9 @@ GPSnet::GPSnet(string filePath)
 			>> lines[i].dx >> lines[i].dy >> lines[i].dz;
 		lines[i].begin.known = false;
 		lines[i].end.known = false;
-		ifs >> P[i][0] >> P[i][1] >> P[i][2];
-		for (int j = 0; j < observation_num; j++)
-		{
-			ifs >> P[i * 3 + 0][i * 3 + 0] >> P[i * 3 + 0][i * 3 + 1] >> P[i * 3 + 0][i * 3 + 2]
-				>> P[i * 3 + 1][i * 3 + 0] >> P[i * 3 + 1][i * 3 + 1] >> P[i * 3 + 1][i * 3 + 2]
-				>> P[i * 3 + 2][i * 3 + 0] >> P[i * 3 + 2][i * 3 + 1] >> P[i * 3 + 3][i * 3 + 2];
-		}
+		ifs >> P(i * 3 + 0, i * 3 + 0) >> P(i * 3 + 0, i * 3 + 1) >> P(i * 3 + 0, i * 3 + 2)
+			>> P(i * 3 + 1, i * 3 + 0) >> P(i * 3 + 1, i * 3 + 1) >> P(i * 3 + 1, i * 3 + 2)
+			>> P(i * 3 + 2, i * 3 + 0) >> P(i * 3 + 2, i * 3 + 1) >> P(i * 3 + 2, i * 3 + 2);
 	}
 
 
@@ -123,11 +116,11 @@ GPSnet::GPSnet(string filePath)
 				if (!(dic.find(lines[i].begin.pointName) == dic.end()))
 					lines[i].begin.pointNum = dic[lines[i].begin.pointName];
 				if (!(dic.find(lines[i].end.pointName) == dic.end()))
-					lines[i].end.pointName = dic[lines[i].end.pointName];
+					lines[i].end.pointNum = dic[lines[i].end.pointName];
 			}
 		}
 		if (!(dic.find(lines[i].end.pointName) == dic.end()))
-			lines[i].end.pointName = dic[lines[i].end.pointName];
+			lines[i].end.pointNum = dic[lines[i].end.pointName];
 		else
 		{
 			dic[lines[i].end.pointName] = sortedNum + 1;
@@ -137,7 +130,7 @@ GPSnet::GPSnet(string filePath)
 				if (!(dic.find(lines[i].begin.pointName) == dic.end()))
 					lines[i].begin.pointNum = dic[lines[i].begin.pointName];
 				if (!(dic.find(lines[i].end.pointName) == dic.end()))
-					lines[i].end.pointName = dic[lines[i].end.pointName];
+					lines[i].end.pointNum = dic[lines[i].end.pointName];
 			}
 		}
 	}
@@ -154,6 +147,7 @@ GPSnet::GPSnet(string filePath)
 				lines[i].end.x = lines[i].begin.x + lines[i].dx;
 				lines[i].end.y = lines[i].begin.y + lines[i].dy;
 				lines[i].end.z = lines[i].begin.z + lines[i].dz;
+				lines[i].end.known = true;
 				success = false;
 			}
 			if (lines[i].begin.known == false && lines[i].end.known == true)
@@ -161,6 +155,7 @@ GPSnet::GPSnet(string filePath)
 				lines[i].begin.x = lines[i].end.x - lines[i].dx;
 				lines[i].begin.y = lines[i].end.y - lines[i].dy;
 				lines[i].begin.z = lines[i].end.z - lines[i].dz;
+				lines[i].begin.known = true;
 				success = false;
 			}
 		}
@@ -169,21 +164,41 @@ GPSnet::GPSnet(string filePath)
 	}
 
 
+
+
+
+
 	for (int i = 0; i < observation_num; i++)
 	{
-		int beginIndex = lines[i].begin.pointNum - known_point_num - 1;
-		int endIndex = lines[i].end.pointNum - known_point_num - 1;
-		if (beginIndex > 0)
-			B[i][beginIndex] = -1;
-		if (endIndex > 0)
-			B[i][endIndex] = 1;
-		l[i].x = lines[i].end.x - lines[i].begin.x - lines[i].dx;
-		l[i].y = lines[i].end.y - lines[i].begin.y - lines[i].dy;
-		l[i].z = lines[i].end.z - lines[i].begin.z - lines[i].dz;
+		cout<<lines[i].begin.known;
 	}
 
 
 
+
+
+	for (int i = 0; i < observation_num ; i++)
+	{
+		int beginIndex = lines[i].begin.pointNum - known_point_num - 1;
+		int endIndex = lines[i].end.pointNum - known_point_num - 1;
+		if (beginIndex > 0)
+		{
+			B(3 * i + 0, 3 * beginIndex + 0) = -1;
+			B(3 * i + 1, 3 * beginIndex + 1) = -1;
+			B(3 * i + 2, 3 * beginIndex + 2) = -1;
+		}
+		if (endIndex > 0)
+		{
+			B(3 * i + 0, 3 * beginIndex + 0) = 1;
+			B(3 * i + 1, 3 * beginIndex + 1) = 1;
+			B(3 * i + 2, 3 * beginIndex + 2) = 1;
+		}
+		l(3 * i + 0) = lines[i].end.x - lines[i].begin.x - lines[i].dx;
+		l(3 * i + 1) = lines[i].end.y - lines[i].begin.y - lines[i].dy;
+		l(3 * i + 2) = lines[i].end.z - lines[i].begin.z - lines[i].dz;
+	}
+
+	
 
 
 }
@@ -192,6 +207,4 @@ GPSnet::~GPSnet()
 {
 	delete[] lines;
 	delete[] knownPoints;
-	delete[] l;
-	delete[] B;
 }
