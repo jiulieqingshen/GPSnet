@@ -86,6 +86,9 @@ GPSnet::GPSnet(string filePath)
 			>> P(i * 3 + 1, i * 3 + 0) >> P(i * 3 + 1, i * 3 + 1) >> P(i * 3 + 1, i * 3 + 2)
 			>> P(i * 3 + 2, i * 3 + 0) >> P(i * 3 + 2, i * 3 + 1) >> P(i * 3 + 2, i * 3 + 2);
 	}
+	cout << "\n\n" <<P;
+	P = P.inverse();
+	cout << "\n\n" << P;
 
 
 
@@ -195,6 +198,11 @@ GPSnet::GPSnet(string filePath)
 		l(3 * i + 1) = lines[i].end.y - lines[i].begin.y - lines[i].dy;
 		l(3 * i + 2) = lines[i].end.z - lines[i].begin.z - lines[i].dz;
 	}
+
+	cout << "\n\n" << B;
+	cout << "\n\n" << (B.transpose()*P*B);
+	cout << "\n\n" << (B.transpose()*P*B).inverse();
+	cout<<"\n\n"<<(B.transpose()*P*B).inverse()*B.transpose()*P*l;
 
 }
 
